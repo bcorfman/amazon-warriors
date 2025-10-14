@@ -47,7 +47,7 @@ class AmazonFighter(BaseAmazon):
         "Attack_2": AnimInfo(fps=10, frame_count=3),
         "Dead": AnimInfo(fps=10, frame_count=4),
         "Hurt": AnimInfo(fps=10, frame_count=4),
-        "Idle": AnimInfo(fps=4, frame_count=1),
+        "Idle": AnimInfo(fps=1, frame_count=1),
         "Idle_2": AnimInfo(fps=10, frame_count=5),
         "Jump": AnimInfo(fps=10, frame_count=12),
         "Run": AnimInfo(fps=10, frame_count=10),

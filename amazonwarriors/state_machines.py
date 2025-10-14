@@ -12,7 +12,6 @@ from .animation_utils import setup_cycle
 
 __all__ = [
     "DuelContext",
-    "auto_state_handlers",
     "PlayerStateMachine",
     "EnemyStateMachine",
 ]
@@ -76,25 +75,84 @@ class PlayerStateMachine(StateMachine):
     Run = State()
     Special = State()
     Walk = State()
-    # Hurt = State()
-    # Dead = State()
+    Hurt = State()
+    Dead = State()
 
-    idle = Idle.to(Idle_2, weight=50) | Idle.to(Idle, weight=50)
+    # unlike enemy state transitions, player transitions are controlled by the user
+    # via the keyboard, so we don't need to use weights
+    idle = (
+        Idle.to(Idle_2)
+        | Idle_2.to(Jump)
+        | Idle_2.to(Run)
+        | Idle_2.to(Walk)
+        | Idle_2.to(Attack_1)
+        | Idle_2.to(Attack_2)
+        | Idle_2.to(Special)
+        | Idle_2.to(Hurt)
+    )
     idle_2 = (
         Idle_2.to(Idle)
-        | Idle_2.to(Jump, weight=0)
-        | Idle_2.to(Run, weight=0)
-        | Idle_2.to(Walk, weight=0)
-        | Idle_2.to(Attack_1, weight=0)
-        | Idle_2.to(Attack_2, weight=0)
-        | Idle_2.to(Special, weight=0)
+        | Idle_2.to(Jump)
+        | Idle_2.to(Run)
+        | Idle_2.to(Walk)
+        | Idle_2.to(Attack_1)
+        | Idle_2.to(Attack_2)
+        | Idle_2.to(Special)
+        | Idle_2.to(Hurt)
     )
-    jump = Jump.to(Run)
-    run = Run.to(Jump)
-    walk = Walk.to(Run)
-    attack_1 = Attack_1.to(Run)
-    attack_2 = Attack_2.to(Run)
-    special = Special.to(Run)
+    jump = (
+        Jump.to(Idle)
+        | Jump.to(Jump)
+        | Jump.to(Run)
+        | Jump.to(Walk)
+        | Jump.to(Attack_1)
+        | Jump.to(Attack_2)
+        | Jump.to(Special)
+        | Jump.to(Hurt)
+    )
+    run = (
+        Run.to(Idle)
+        | Run.to(Jump)
+        | Run.to(Run)
+        | Run.to(Walk)
+        | Run.to(Attack_1)
+        | Run.to(Attack_2)
+        | Run.to(Special)
+        | Run.to(Hurt)
+    )
+    walk = (
+        Walk.to(Idle)
+        | Walk.to(Jump)
+        | Walk.to(Run)
+        | Walk.to(Walk)
+        | Walk.to(Attack_1)
+        | Walk.to(Attack_2)
+        | Walk.to(Special)
+        | Walk.to(Hurt)
+    )
+    attack_1 = (
+        Attack_1.to(Idle)
+        | Attack_1.to(Jump)
+        | Attack_1.to(Run)
+        | Attack_1.to(Walk)
+        | Attack_1.to(Attack_1)
+        | Attack_1.to(Attack_2)
+        | Attack_1.to(Special)
+        | Attack_1.to(Hurt)
+    )
+    attack_2 = (
+        Attack_2.to(Idle)
+        | Attack_2.to(Jump)
+        | Attack_2.to(Run)
+        | Attack_2.to(Walk)
+        | Attack_2.to(Attack_1)
+        | Attack_2.to(Attack_2)
+        | Attack_2.to(Special)
+        | Attack_2.to(Hurt)
+    )
+    special = Special.to(Walk) | Special.to(Idle)
+    hurt = Hurt.to(Dead)
+    dead = Dead.to(Idle)
 
     def __init__(self, ctx: DuelContext):
         self.ctx = ctx
