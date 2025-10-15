@@ -1,0 +1,64 @@
+---
+alwaysApply: true
+---
+Refer to these rules before proceeding with code generation.
+
+For interface design:
+* ZERO TOLERANCE for runtime type/attribute checking (hasattr, getattr, isinstance, EAFP-with-pass)
+* Design interfaces so checking isn't needed - unclear interfaces are the real problem
+* Use consistent base interfaces with default values
+* Define clear protocols guaranteeing expected methods/attributes
+* Apply composition patterns eliminating optional attributes
+* Create unified interfaces for similar objects
+
+For error handling:
+* Use EAFP only for genuine decision points with real fallback logic
+* NEVER use EAFP for error silencing
+* FORBIDDEN: `except AttributeError: pass` - this is a code smell
+* ACCEPTABLE: `except AttributeError: return default_value` with genuine fallback
+
+
+
+In the tests/ directory:
+* Unit and integration tests for the amazonwarriors demo
+
+Arcade 3.x API Guidelines:
+* Always prefer the modern Arcade 3.x API
+* Text rendering: Use arcade.Text objects that are created once (e.g. in __init__) and drawn with .draw()
+* Avoid arcade.draw_text in the render loop - it incurs a high per-frame CPU cost and triggers performance warnings
+
+Core design principles that must be followed:
+* Prefer the ArcadeActions API over the Arcade 3.x API wherever it saves lines of code.
+* Consider carefully how to use python-statemachine and ArcadeActions together for managing player state in a way that is the easiest to understand for the developer.
+
+CRITICAL API Rule - Velocity Semantics:
+* ALL velocity values use Arcade's native "pixels per frame at 60 FPS" semantics, NOT "pixels per second"
+* MoveUntil((5, 0), condition) means 5 pixels per frame, not 5 pixels per second
+* RotateUntil(3, condition) means 3 degrees per frame, not 3 degrees per second  
+* This maintains perfect consistency with Arcade's sprite.change_x/change_y/change_angle system
+* NEVER convert velocities by dividing/multiplying by frame rates - use raw values directly
+* When in doubt about velocity values, refer to Arcade's native sprite velocity documentation
+
+General rules:
+* Try to AVOID state flags wherever possible (booleans like self.respawning, self.is_active); use action states and completion callbacks instead.
+
+CRITICAL: Condition function usage:
+* ALWAYS use `infinite` instead of `lambda: False` for infinite/never-ending conditions
+* This is the standard pattern in ArcadeActions
+
+CRITICAL: Velocity system consistency:
+* The MoveUntil action ALWAYS uses sprite.change_x and sprite.change_y (Arcade's built-in velocity system)
+* NEVER use sprite.velocity - that's not how MoveUntil works
+
+For sprite management:
+* Use arcade.Sprite for all sprites - actions work directly with standard Arcade sprites
+* Use arcade.SpriteList for groups of sprites that need coordinated actions
+* No custom sprite classes needed - actions apply to targets via action.apply(sprite/sprite_list)
+
+For group management:
+* Use arcade.SpriteList for basic sprite collections
+* Actions are applied directly to sprites or sprite lists using action.apply(target, tag="name")
+
+CRITICAL: Python execution rule:
+* This project uses uv for dependency management and virtual environment handling
+* ALWAYS use `uv run python` instead of `python` for running Python scripts and tests

@@ -21,6 +21,10 @@ __all__ = [
 class AnimInfo:
     fps: int
     frame_count: int
+    offset_x: int = 0
+    offset_y: int = 0
+    x_vel: int = 0
+    y_vel: int = 0
     frames: list[arcade.Texture] = field(default_factory=list)
 
 
