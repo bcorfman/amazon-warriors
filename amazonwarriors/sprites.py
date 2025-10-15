@@ -8,6 +8,7 @@ import arcade
 
 from .animation_utils import AnimInfo, load_animation
 from .constants import ENEMY_ASSETS_ROOT, PLAYER_ASSETS_ROOT
+from .input_state import InputState
 from .state_machines import DuelContext, EnemyStateMachine, PlayerStateMachine
 
 __all__ = [
@@ -49,29 +50,19 @@ class AmazonFighter(BaseAmazon):
         "Hurt": AnimInfo(fps=10, frame_count=4),
         "Idle": AnimInfo(fps=1, frame_count=1),
         "Idle_2": AnimInfo(fps=10, frame_count=5),
-        "Jump": AnimInfo(fps=10, frame_count=12),
-        "Run": AnimInfo(fps=10, frame_count=10),
+        "Jump": AnimInfo(fps=10, frame_count=11),
+        "Run": AnimInfo(fps=14, frame_count=10),
         "Special": AnimInfo(fps=10, frame_count=5),
         "Walk": AnimInfo(fps=10, frame_count=10),
     }
 
-    def __init__(self, scale: float = 1.0):
+    def __init__(self, scale: float = 1.0, input_state: InputState | None = None):
         super().__init__(self.PLAYER_ANIM_INFO, PLAYER_ASSETS_ROOT, scale)
-        self.ctx = DuelContext(self)
+        # Use provided input_state or create default (for testing)
+        if input_state is None:
+            input_state = InputState()
+        self.ctx = DuelContext(self, input_state)
         self.state_machine = PlayerStateMachine(self.ctx)
-
-    # Example input handling method (kept minimal)
-    def on_input(self, key: int, pressed: bool):
-        sm = self.state_machine
-        if key in (arcade.key.LEFT, arcade.key.RIGHT):
-            if pressed and sm.idle.is_active:
-                sm.run()
-            elif not pressed and sm.run.is_active:
-                sm.idle()
-        elif key == arcade.key.SPACE and pressed:
-            sm.jump()
-        elif key == arcade.key.LCTRL and pressed:
-            sm.attack()
 
 
 class AmazonEnemy(BaseAmazon):
@@ -83,7 +74,7 @@ class AmazonEnemy(BaseAmazon):
         "Dead": AnimInfo(fps=10, frame_count=4),
         "Hurt": AnimInfo(fps=10, frame_count=4),
         "Idle": AnimInfo(fps=1, frame_count=1),
-        "Idle_2": AnimInfo(fps=1, frame_count=6),
+        "Idle_2": AnimInfo(fps=10, frame_count=6),
         "Jump": AnimInfo(fps=10, frame_count=11),
         "Run": AnimInfo(fps=10, frame_count=10),
         "Special": AnimInfo(fps=10, frame_count=5),
