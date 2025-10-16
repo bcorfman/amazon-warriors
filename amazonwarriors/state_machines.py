@@ -6,7 +6,7 @@ from collections import deque
 from collections.abc import Callable
 
 import arcade
-from actions import Action
+from actions import Action, move_by, move_until
 from statemachine import State, StateMachine
 
 from .animation_utils import setup_cycle
@@ -246,12 +246,17 @@ class PlayerStateMachine(StateMachine):
         def on_jump_complete():
             self.resume()  # Use resume event to decide Idle/Walk/Run based on keys
 
+        info = self.ctx.figure.state_info["Jump"]
         setup_cycle(
             sprite=self.ctx.figure,
-            info=self.ctx.figure.state_info["Jump"],
+            info=info,
             on_cycle_complete=on_jump_complete,
             sprite_tag="player",
         )
+        if info.offset_x != 0 or info.offset_y != 0:
+            move_by(self.ctx.figure, (info.offset_x, info.offset_y))
+        elif info.x_vel != 0 or info.y_vel != 0:
+            move_until(self.ctx.figure, info.x_vel, info.y_vel, condition=on_jump_complete, tag="player")
 
     # Custom handlers for Attack_1
     def on_enter_Attack_1(self):

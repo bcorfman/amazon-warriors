@@ -50,10 +50,10 @@ class AmazonFighter(BaseAmazon):
         "Hurt": AnimInfo(fps=10, frame_count=4),
         "Idle": AnimInfo(fps=1, frame_count=1),
         "Idle_2": AnimInfo(fps=10, frame_count=5),
-        "Jump": AnimInfo(fps=10, frame_count=11),
-        "Run": AnimInfo(fps=14, frame_count=10),
+        "Jump": AnimInfo(fps=14, frame_count=11, offset_x=10, x_vel=4),
+        "Run": AnimInfo(fps=14, frame_count=10, x_vel=4),
         "Special": AnimInfo(fps=10, frame_count=5),
-        "Walk": AnimInfo(fps=10, frame_count=10),
+        "Walk": AnimInfo(fps=10, frame_count=10, x_vel=2),
     }
 
     def __init__(self, scale: float = 1.0, input_state: InputState | None = None):
