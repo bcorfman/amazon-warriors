@@ -6,7 +6,7 @@ from collections import deque
 from collections.abc import Callable
 
 import arcade
-from actions import Action, move_by, move_until
+from actions import Action
 from statemachine import State, StateMachine
 
 from .animation_utils import setup_cycle
@@ -31,7 +31,17 @@ class DuelContext:
 
 
 def auto_state_handlers(sprite_tag: str):
-    """Decorator to auto-generate enter/exit methods for each State attr."""
+    """Decorator to auto-generate enter/exit methods for each State attr.
+
+    Automatically handles:
+    - Animation cycling via setup_cycle
+    - Command consumption for action states (Jump, Attack_1, Attack_2, Special)
+    - Movement logic based on AnimInfo (offset_x/y for move_by, x_vel/y_vel for move_until)
+    - Appropriate callbacks (resume() for action states, transition method for movement states)
+    """
+
+    # Action states that should consume commands and use resume() callback
+    ACTION_STATES = {"Jump", "Attack_1", "Attack_2", "Special"}
 
     def decorator(cls):
         states = [name for name in dir(cls) if isinstance(getattr(cls, name), State)]
@@ -43,28 +53,61 @@ def auto_state_handlers(sprite_tag: str):
             enter_name = f"on_enter_{state_name}"
             if not hasattr(cls, enter_name):
 
-                def make_enter(s_name: str, s_key: str):
+                def make_enter(s_name: str, s_key: str, tag: str):
+                    is_action = s_key in ACTION_STATES
+
                     def _enter(self):
-                        transition_method: Callable[[], None] = getattr(self, s_name.lower())
+                        # Import at runtime to avoid circular/timing issues
+                        from actions import infinite as _infinite
+                        from actions import move_by as _move_by
+                        from actions import move_until as _move_until
+
+                        # Action states consume commands
+                        if is_action and hasattr(self, "_consume_cmd"):
+                            self._consume_cmd()
+
+                        # Determine callback: action states use resume(), movement states use transition method
+                        if is_action and hasattr(self, "resume"):
+                            on_complete = lambda: self.resume()
+                        else:
+                            transition_method: Callable[[], None] = getattr(self, s_name.lower())
+                            on_complete = lambda: transition_method()
+
+                        # Setup animation cycle
+                        info = self.ctx.figure.state_info[s_key]
                         setup_cycle(
                             sprite=self.ctx.figure,
-                            info=self.ctx.figure.state_info[s_key],
-                            on_cycle_complete=lambda: transition_method(),
-                            sprite_tag=sprite_tag,
+                            info=info,
+                            on_cycle_complete=on_complete,
+                            sprite_tag=tag,
                         )
+
+                        # Apply movement logic based on AnimInfo
+                        if info.offset_x != 0 or info.offset_y != 0:
+                            _move_by(self.ctx.figure, (info.offset_x, info.offset_y))
+                        if info.x_vel != 0 or info.y_vel != 0:
+                            _move_until(
+                                self.ctx.figure,
+                                velocity=(info.x_vel, info.y_vel),
+                                condition=_infinite,
+                                tag=tag,
+                            )
 
                     return _enter
 
-                setattr(cls, enter_name, make_enter(state_name, state_key))
+                setattr(cls, enter_name, make_enter(state_name, state_key, sprite_tag))
 
             # on_exit_*
             exit_name = f"on_exit_{state_name}"
             if not hasattr(cls, exit_name):
 
-                def _exit(self):  # noqa: D401
-                    Action.stop_actions_for_target(self.ctx.figure, sprite_tag)
+                def make_exit(tag: str):
+                    def _exit(self):  # noqa: D401
+                        Action.stop_actions_for_target(self.ctx.figure, tag)
 
-                setattr(cls, exit_name, _exit)
+                    return _exit
+
+                setattr(cls, exit_name, make_exit(sprite_tag))
 
         return cls
 
@@ -237,71 +280,6 @@ class PlayerStateMachine(StateMachine):
             # Normal action - fire the event
             self.ctx.input_state.latest_cmd = cmd
             self.action(self.ctx.input_state)
-
-    # Custom handlers for Jump to choose destination based on movement key state
-    def on_enter_Jump(self):
-        """Setup jump animation, will return to Idle, Walk, or Run when complete."""
-        self._consume_cmd()  # Consume the command that triggered this transition
-
-        def on_jump_complete():
-            self.resume()  # Use resume event to decide Idle/Walk/Run based on keys
-
-        info = self.ctx.figure.state_info["Jump"]
-        setup_cycle(
-            sprite=self.ctx.figure,
-            info=info,
-            on_cycle_complete=on_jump_complete,
-            sprite_tag="player",
-        )
-        if info.offset_x != 0 or info.offset_y != 0:
-            move_by(self.ctx.figure, (info.offset_x, info.offset_y))
-        elif info.x_vel != 0 or info.y_vel != 0:
-            move_until(self.ctx.figure, info.x_vel, info.y_vel, condition=on_jump_complete, tag="player")
-
-    # Custom handlers for Attack_1
-    def on_enter_Attack_1(self):
-        """Setup attack animation, will return to Idle, Walk, or Run when complete."""
-        self._consume_cmd()  # Consume the command that triggered this transition
-
-        def on_attack_complete():
-            self.resume()  # Use resume event to decide Idle/Walk/Run based on keys
-
-        setup_cycle(
-            sprite=self.ctx.figure,
-            info=self.ctx.figure.state_info["Attack_1"],
-            on_cycle_complete=on_attack_complete,
-            sprite_tag="player",
-        )
-
-    # Custom handlers for Attack_2
-    def on_enter_Attack_2(self):
-        """Setup attack_2 animation, will return to Idle, Walk, or Run when complete."""
-        self._consume_cmd()  # Consume the command that triggered this transition
-
-        def on_attack_complete():
-            self.resume()  # Use resume event to decide Idle/Walk/Run based on keys
-
-        setup_cycle(
-            sprite=self.ctx.figure,
-            info=self.ctx.figure.state_info["Attack_2"],
-            on_cycle_complete=on_attack_complete,
-            sprite_tag="player",
-        )
-
-    # Custom handlers for Special
-    def on_enter_Special(self):
-        """Setup special animation, will return to Idle, Walk, or Run when complete."""
-        self._consume_cmd()  # Consume the command that triggered this transition
-
-        def on_attack_complete():
-            self.resume()  # Use resume event to decide Idle/Walk/Run based on keys
-
-        setup_cycle(
-            sprite=self.ctx.figure,
-            info=self.ctx.figure.state_info["Special"],
-            on_cycle_complete=on_attack_complete,
-            sprite_tag="player",
-        )
 
     # after_* hooks to drain buffer once an animation completes
     def after_jump(self):
