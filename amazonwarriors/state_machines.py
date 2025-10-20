@@ -31,78 +31,99 @@ class DuelContext:
 
 
 def auto_state_handlers(sprite_tag: str):
-    """Decorator to auto-generate enter/exit methods for each State attr.
+    """Class decorator that auto-generates ``on_enter_*`` and ``on_exit_*`` handlers for
+    each ``statemachine.State`` declared on the decorated class.
 
-    Automatically handles:
-    - Animation cycling via setup_cycle
-    - Command consumption for action states (Jump, Attack_1, Attack_2, Special)
-    - Movement logic based on AnimInfo (offset_x/y for move_by, x_vel/y_vel for move_until)
-    - Appropriate callbacks (resume() for action states, transition method for movement states)
     """
 
-    # Action states that should consume commands and use resume() callback
-    ACTION_STATES = {"Jump", "Attack_1", "Attack_2", "Special"}
+    ACTION_STATES: set[str] = {"Jump", "Attack_1", "Attack_2", "Special"}
 
-    def decorator(cls):
-        states = [name for name in dir(cls) if isinstance(getattr(cls, name), State)]
+    def decorator(cls: type):
+        # ----- Static discovery phase (runs once during class creation) ---------
+        # 1. Collect state attribute names declared *directly* on the class.
+        state_names = [name for name, attr in cls.__dict__.items() if isinstance(attr, State)]
 
-        for state_name in states:
+        # 2. Pre-compute interface availability so runtime code stays branch-free.
+        has_consume = "_consume_cmd" in cls.__dict__
+        has_resume_event = "resume" in cls.__dict__  # "resume" event defined via statemachine DSL
+
+        for state_name in state_names:
             state_key = state_name.replace("_", " ").title().replace(" ", "_")
 
-            # on_enter_*
+            # ------------------------------------------------------------------
+            # on_enter_*  -------------------------------------------------------
+            # ------------------------------------------------------------------
             enter_name = f"on_enter_{state_name}"
-            if not hasattr(cls, enter_name):
+            if enter_name not in cls.__dict__:
 
-                def make_enter(s_name: str, s_key: str, tag: str):
-                    is_action = s_key in ACTION_STATES
+                def make_enter(s_name: str, s_key: str, tag: str, *, can_consume: bool, can_resume: bool):
+                    is_action_state = s_key in ACTION_STATES
+                    transition_event_name = s_name.lower()
 
-                    def _enter(self):
-                        # Import at runtime to avoid circular/timing issues
+                    def _enter(self):  # noqa: D401 – simple event hook
+                        # Lazy import – avoids circular deps at import time.
                         from actions import infinite as _infinite
                         from actions import move_by as _move_by
                         from actions import move_until as _move_until
 
-                        # Action states consume commands
-                        if is_action and hasattr(self, "_consume_cmd"):
+                        # 1. Mutate input-command queue for *action* states.
+                        if is_action_state and can_consume:
                             self._consume_cmd()
 
-                        # Determine callback: action states use resume(), movement states use transition method
-                        if is_action and hasattr(self, "resume"):
-                            on_complete = lambda: self.resume()
+                        # 2. Determine callback for when the animation cycle
+                        #    completes.  Action states -> resume event;
+                        #    movement states -> self.<state_name>() transition.
+                        if is_action_state and can_resume:
+                            on_complete: Callable[[], None] = self.resume
                         else:
-                            transition_method: Callable[[], None] = getattr(self, s_name.lower())
-                            on_complete = lambda: transition_method()
+                            # We intentionally look-up *once* on the instance – no
+                            # conditionals or hasattr needed because the
+                            # transition event is guaranteed to exist by the
+                            # state-machine DSL.
+                            on_complete = getattr(self, transition_event_name)
 
-                        # Setup animation cycle
+                        # 3. Kick off sprite animation & movement according to
+                        #    AnimInfo meta attached to the sprite.
                         info = self.ctx.figure.state_info[s_key]
+                        if info.x_vel or info.y_vel:
+                            direction = self.ctx.input_state.direction
+                        else:
+                            direction = 1
+
                         setup_cycle(
                             sprite=self.ctx.figure,
                             info=info,
+                            direction=direction,
                             on_cycle_complete=on_complete,
                             sprite_tag=tag,
                         )
 
-                        # Apply movement logic based on AnimInfo
-                        if info.offset_x != 0 or info.offset_y != 0:
+                        if info.offset_x or info.offset_y:
                             _move_by(self.ctx.figure, (info.offset_x, info.offset_y))
-                        if info.x_vel != 0 or info.y_vel != 0:
+                        if info.x_vel or info.y_vel:
                             _move_until(
                                 self.ctx.figure,
-                                velocity=(info.x_vel, info.y_vel),
+                                velocity=(info.x_vel * self.ctx.input_state.direction, info.y_vel),
                                 condition=_infinite,
                                 tag=tag,
                             )
 
                     return _enter
 
-                setattr(cls, enter_name, make_enter(state_name, state_key, sprite_tag))
+                setattr(
+                    cls,
+                    enter_name,
+                    make_enter(state_name, state_key, sprite_tag, can_consume=has_consume, can_resume=has_resume_event),
+                )
 
-            # on_exit_*
+            # ------------------------------------------------------------------
+            # on_exit_*  --------------------------------------------------------
+            # ------------------------------------------------------------------
             exit_name = f"on_exit_{state_name}"
-            if not hasattr(cls, exit_name):
+            if exit_name not in cls.__dict__:
 
                 def make_exit(tag: str):
-                    def _exit(self):  # noqa: D401
+                    def _exit(self):  # noqa: D401 – simple event hook
                         Action.stop_actions_for_target(self.ctx.figure, tag)
 
                     return _exit

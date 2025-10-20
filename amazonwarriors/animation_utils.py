@@ -25,12 +25,14 @@ class AnimInfo:
     offset_y: int = 0
     x_vel: int = 0
     y_vel: int = 0
-    frames: list[arcade.Texture] = field(default_factory=list)
+    left_frames: list[arcade.Texture] = field(default_factory=list)
+    right_frames: list[arcade.Texture] = field(default_factory=list)
 
 
 def setup_cycle(
     sprite: arcade.Sprite,
     info: AnimInfo,
+    direction: int,
     on_cycle_complete: Callable[[], None],
     sprite_tag: str,
 ) -> None:
@@ -40,6 +42,7 @@ def setup_cycle(
     cycle_textures_until(
         sprite,
         textures=info.frames,
+        direction=direction,
         frames_per_second=info.fps,
         tag=sprite_tag,
     )
@@ -56,7 +59,7 @@ def load_animation(
     state: str,
     info: AnimInfo,
     folder: Path,
-    flip_vertical: bool,
+    flip_vertical: bool = False,
 ) -> list[arcade.Texture]:
     """Load textures from a sprite sheet, premultiplying alpha, fully in-memory."""
 

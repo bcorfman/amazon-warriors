@@ -25,14 +25,14 @@ dev-dependencies = [
 python-statemachine = { git = "https://github.com/bcorfman/python-statemachine", rev = "develop" }
 
 [tool.pytest.ini_options]
-addopts = "--cov-branch --cov-report term --cov=core"
+addopts = "--cov-branch --cov-report term --cov=amazonwarriors"
 testpaths = ["tests"]
 filterwarnings = ["ignore::DeprecationWarning"]
 markers=["unit: Unit tests.",
-         "system: System (browser-based) tests."]
+         "integration: Integration tests."]
          
 [tool.coverage.run]
-source = ["core"]
+source = ["amazonwarriors"]
 
 [tool.ruff]
 line-length = 120

@@ -24,7 +24,7 @@ class TestMovementTransitions:
         assert sm.Idle.is_active
 
         # Press movement key (no shift) -> should walk
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
 
         assert sm.Walk.is_active
@@ -36,7 +36,7 @@ class TestMovementTransitions:
         assert sm.Idle.is_active
 
         # Press movement + shift -> should run
-        inp.move_key_pressed = True
+        inp.press_right()
         inp.shift_key_pressed = True
         sm.movement(inp)
 
@@ -47,12 +47,12 @@ class TestMovementTransitions:
         sm = fighter.state_machine
 
         # Start walking
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
         assert sm.Walk.is_active
 
         # Release movement -> should idle
-        inp.move_key_pressed = False
+        inp.release_right()
         sm.movement(inp)
 
         assert sm.Idle.is_active
@@ -62,7 +62,7 @@ class TestMovementTransitions:
         sm = fighter.state_machine
 
         # Start walking
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
         assert sm.Walk.is_active
 
@@ -77,7 +77,7 @@ class TestMovementTransitions:
         sm = fighter.state_machine
 
         # Start running
-        inp.move_key_pressed = True
+        inp.press_right()
         inp.shift_key_pressed = True
         sm.movement(inp)
         assert sm.Run.is_active
@@ -108,7 +108,7 @@ class TestDiscreteActions:
         sm = fighter.state_machine
 
         # Start walking
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
         assert sm.Walk.is_active
 
@@ -185,7 +185,7 @@ class TestReturnToMovement:
         sm = fighter.state_machine
 
         # Start walking
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
 
         # Jump
@@ -201,7 +201,7 @@ class TestReturnToMovement:
         sm = fighter.state_machine
 
         # Start running
-        inp.move_key_pressed = True
+        inp.press_right()
         inp.shift_key_pressed = True
         sm.movement(inp)
 
@@ -230,7 +230,7 @@ class TestReturnToMovement:
         sm = fighter.state_machine
 
         # Start walking
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
 
         # Attack
@@ -246,7 +246,7 @@ class TestReturnToMovement:
         sm = fighter.state_machine
 
         # Start running
-        inp.move_key_pressed = True
+        inp.press_right()
         inp.shift_key_pressed = True
         sm.movement(inp)
 
@@ -263,7 +263,7 @@ class TestReturnToMovement:
         sm = fighter.state_machine
 
         # Start walking
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
 
         # Attack_2
@@ -279,7 +279,7 @@ class TestReturnToMovement:
         sm = fighter.state_machine
 
         # Start running
-        inp.move_key_pressed = True
+        inp.press_right()
         inp.shift_key_pressed = True
         sm.movement(inp)
 
@@ -296,7 +296,7 @@ class TestReturnToMovement:
         sm = fighter.state_machine
 
         # Start walking
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
 
         # Special
@@ -312,7 +312,7 @@ class TestReturnToMovement:
         sm = fighter.state_machine
 
         # Start running
-        inp.move_key_pressed = True
+        inp.press_right()
         inp.shift_key_pressed = True
         sm.movement(inp)
 
@@ -439,7 +439,7 @@ class TestNoAnimationRestart:
         assert sm.Jump.is_active
 
         # Tap movement keys - should be ignored (no transition from Jump on movement)
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
 
         # Should still be in Jump
@@ -465,7 +465,7 @@ class TestNoAnimationRestart:
         sm = fighter.state_machine
 
         # Start running
-        inp.move_key_pressed = True
+        inp.press_right()
         inp.shift_key_pressed = True
         sm.movement(inp)
         assert sm.Run.is_active
@@ -493,7 +493,7 @@ class TestNoAnimationRestart:
         sm = fighter.state_machine
 
         # Start running
-        inp.move_key_pressed = True
+        inp.press_right()
         inp.shift_key_pressed = True
         sm.movement(inp)
         assert sm.Run.is_active
@@ -521,7 +521,7 @@ class TestNoAnimationRestart:
         sm = fighter.state_machine
 
         # Start walking
-        inp.move_key_pressed = True
+        inp.press_right()
         sm.movement(inp)
         assert sm.Walk.is_active
 

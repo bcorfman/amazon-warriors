@@ -31,7 +31,7 @@ class BaseAmazon(arcade.Sprite):
         # Load frames for each state
         self.state_info = state_info
         for state, info in self.state_info.items():
-            self.state_info[state].frames = load_animation(state, info, sprites_dir, flip_vertical)
+            info.frames = load_animation(state, info, sprites_dir, flip_vertical)
 
         super().__init__(
             self.state_info["Idle"].frames,

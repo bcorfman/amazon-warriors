@@ -3,22 +3,6 @@ alwaysApply: true
 ---
 Refer to these rules before proceeding with code generation.
 
-For interface design:
-* ZERO TOLERANCE for runtime type/attribute checking (hasattr, getattr, isinstance, EAFP-with-pass)
-* Design interfaces so checking isn't needed - unclear interfaces are the real problem
-* Use consistent base interfaces with default values
-* Define clear protocols guaranteeing expected methods/attributes
-* Apply composition patterns eliminating optional attributes
-* Create unified interfaces for similar objects
-
-For error handling:
-* Use EAFP only for genuine decision points with real fallback logic
-* NEVER use EAFP for error silencing
-* FORBIDDEN: `except AttributeError: pass` - this is a code smell
-* ACCEPTABLE: `except AttributeError: return default_value` with genuine fallback
-
-
-
 In the tests/ directory:
 * Unit and integration tests for the amazonwarriors demo
 

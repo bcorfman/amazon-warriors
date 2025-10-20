@@ -45,9 +45,12 @@ class DuelView(arcade.View):
         if key == arcade.key.ESCAPE:
             self.window.close()
 
-        # Track continuous movement input and fire movement event
-        if key in (arcade.key.LEFT, arcade.key.RIGHT):
-            self.input_state.move_key_pressed = True
+        # Track directional movement input
+        if key == arcade.key.LEFT:
+            self.input_state.press_left()
+            self.player.state_machine.movement(self.input_state)
+        elif key == arcade.key.RIGHT:
+            self.input_state.press_right()
             self.player.state_machine.movement(self.input_state)
         elif key == arcade.key.LSHIFT:
             self.input_state.shift_key_pressed = True
@@ -61,9 +64,12 @@ class DuelView(arcade.View):
             self.player.state_machine.handle_action_input("attack_1")
 
     def on_key_release(self, key, modifiers):
-        # Track continuous movement input and fire movement event
-        if key in (arcade.key.LEFT, arcade.key.RIGHT):
-            self.input_state.move_key_pressed = False
+        # Track directional movement input
+        if key == arcade.key.LEFT:
+            self.input_state.release_left()
+            self.player.state_machine.movement(self.input_state)
+        elif key == arcade.key.RIGHT:
+            self.input_state.release_right()
             self.player.state_machine.movement(self.input_state)
         elif key == arcade.key.LSHIFT:
             self.input_state.shift_key_pressed = False

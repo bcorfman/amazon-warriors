@@ -1,0 +1,48 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Refer to these rules for instructions on how to create testable project source code before proceeding with code generation.
+
+For error handling:
+* Use EAFP only for genuine decision points with real fallback logic
+* NEVER use EAFP for error silencing
+* FORBIDDEN: `except AttributeError: pass` - this is a code smell
+* ACCEPTABLE: `except AttributeError: return default_value` with genuine fallback
+
+For interface design:
+* ZERO TOLERANCE for runtime type/attribute checking (hasattr, getattr, isinstance, EAFP-with-pass)
+* Design interfaces so checking isn't needed - unclear interfaces are the real problem
+* Use consistent base interfaces with default values
+* Define clear protocols guaranteeing expected methods/attributes
+* Apply composition patterns eliminating optional attributes
+* Create unified interfaces for similar objects
+
+Common dependency injection patterns:
+* Constructor injection: Pass all required dependencies through the constructor
+* Interface segregation: Use specific interfaces rather than concrete classes
+* Optional dependencies: Use default parameters or factory patterns for optional dependencies
+* Event-based communication: Use events to avoid circular dependencies between components
+
+For constructor design:
+* Use constructor parameters to set instance variables
+* Validate dependencies in constructors with null checks
+* Consider making dependencies optional if they're not always needed
+
+For avoiding tight coupling:
+* FORBIDDEN: Static method calls for dependencies that could be mocked
+* FORBIDDEN: Circular dependencies between classes
+* ACCEPTABLE: Static calls only for genuine utility functions
+
+For testability and documentation:
+* Avoid mocks unless it's necessary
+* Document how to test classes and mock their dependencies
+* Include "test", "mock", or "dependency" information in class docstrings
+* Design interfaces so dependencies can be easily replaced with test doubles
+* Use composition over inheritance for dependency relationships
+
+For lifecycle management:
+* If implementing IDisposable, dispose of dependencies in the Dispose method
+* Consider dependency lifecycle when designing object relationships
+* Avoid holding references to dependencies longer than necessary
