@@ -70,26 +70,29 @@ def auto_state_handlers(sprite_tag: str):
                         if is_action_state and can_consume:
                             self._consume_cmd()
 
-                        # 2. Determine callback for when the animation cycle
-                        #    completes.  Action states -> resume event;
-                        #    movement states -> self.<state_name>() transition.
+                        # 2. Determine callback for when the animation cycle completes.
+                        #    Action states: check queue first, then resume to movement.
+                        #    Movement states: loop via self.<state_name>() transition.
                         if is_action_state and can_resume:
-                            on_complete: Callable[[], None] = self.resume
+
+                            def _on_action_complete():
+                                # Chain buffered actions before resuming to movement.
+                                # This prevents Walk from briefly restarting between chained actions.
+                                if self._queue:
+                                    cmd = self._queue.popleft()
+                                    self.ctx.input_state.latest_cmd = cmd
+                                    self.action(self.ctx.input_state)
+                                else:
+                                    self.resume()
+
+                            on_complete: Callable[[], None] = _on_action_complete
                         else:
-                            # We intentionally look-up *once* on the instance – no
-                            # conditionals or hasattr needed because the
-                            # transition event is guaranteed to exist by the
-                            # state-machine DSL.
                             on_complete = getattr(self, transition_event_name)
 
-                        # 3. Kick off sprite animation & movement according to
-                        #    AnimInfo meta attached to the sprite.
                         info = self.ctx.figure.state_info[s_key]
-                        if info.x_vel or info.y_vel:
-                            direction = self.ctx.input_state.direction
-                        else:
-                            direction = 1
+                        direction = self.ctx.input_state.direction if self.ctx.input_state else 1
 
+                        Action.stop_actions_for_target(self.ctx.figure, tag=tag)
                         setup_cycle(
                             sprite=self.ctx.figure,
                             info=info,
@@ -103,7 +106,7 @@ def auto_state_handlers(sprite_tag: str):
                         if info.x_vel or info.y_vel:
                             _move_until(
                                 self.ctx.figure,
-                                velocity=(info.x_vel * self.ctx.input_state.direction, info.y_vel),
+                                velocity=(info.x_vel * direction, info.y_vel),
                                 condition=_infinite,
                                 tag=tag,
                             )
@@ -154,11 +157,13 @@ class PlayerStateMachine(StateMachine):
     # High-level events driven by guards
     movement = (
         Idle.to(Walk, cond="move and not shift")
-        | Idle.to(Run, cond="move and shift")
+        | Idle.to(Run, cond="move and shift and forward")  # Can only run forward
+        | Idle.to(Walk, cond="move and shift")  # Shift+backward -> still just walk
         | Idle.to(Idle, unless="move")
-        | Walk.to(Run, cond="move and shift")  # Still moving, shift pressed
+        | Walk.to(Run, cond="move and shift and forward")  # Can only run forward
         | Walk.to(Idle, unless="move")  # Movement released
         | Run.to(Walk, cond="move and not shift")  # Still moving, shift released
+        | Run.to(Walk, cond="move and not forward")  # Direction changed to backward -> walk
         | Run.to(Idle, unless="move")  # Movement released
     )
 
@@ -166,10 +171,10 @@ class PlayerStateMachine(StateMachine):
     # Note: If already in a discrete action state, handle_action_input() will buffer the command
     # rather than firing this event, preventing animation restarts
     action = (
-        Idle.to(Jump, cond="cmd_jump")
-        | Walk.to(Jump, cond="cmd_jump")
-        | Run.to(Jump, cond="cmd_jump")
-        | Idle.to(Attack_1, cond="cmd_attack_1")
+        Idle.to(Jump, cond="cmd_jump and forward")  # Can only jump forward
+        | Walk.to(Jump, cond="cmd_jump and forward")  # Can only jump forward
+        | Run.to(Jump, cond="cmd_jump")  # Already forward if running
+        | Idle.to(Attack_1, cond="cmd_attack_1")  # Attack_1 works in any direction
         | Walk.to(Attack_1, cond="cmd_attack_1")
         | Run.to(Attack_1, cond="cmd_attack_1")
         | Idle.to(Attack_2, cond="cmd_attack_2")
@@ -191,17 +196,18 @@ class PlayerStateMachine(StateMachine):
     walk = Walk.to(Walk)  # Walk loops
 
     # Resume logic after discrete animations: respect Shift key for Run vs Walk
+    # Can only resume to Run when moving forward
     resume = (
-        Jump.to(Run, cond="move and shift")
+        Jump.to(Run, cond="move and shift and forward")
         | Jump.to(Walk, cond="move and not shift")
         | Jump.to(Idle, unless="move")
-        | Attack_1.to(Run, cond="move and shift")
+        | Attack_1.to(Run, cond="move and shift and forward")
         | Attack_1.to(Walk, cond="move and not shift")
         | Attack_1.to(Idle, unless="move")
-        | Attack_2.to(Run, cond="move and shift")
+        | Attack_2.to(Run, cond="move and shift and forward")
         | Attack_2.to(Walk, cond="move and not shift")
         | Attack_2.to(Idle, unless="move")
-        | Special.to(Run, cond="move and shift")
+        | Special.to(Run, cond="move and shift and forward")
         | Special.to(Walk, cond="move and not shift")
         | Special.to(Idle, unless="move")
     )
@@ -234,6 +240,11 @@ class PlayerStateMachine(StateMachine):
     @property
     def any(self):
         return True
+
+    @property
+    def forward(self):
+        """True when player is facing/moving forward (right/direction == 1)."""
+        return self.ctx.input_state.direction == 1
 
     # Command guards (check but DON'T consume - consumption happens in on_enter_*)
     def _check_cmd(self, name: str) -> bool:

@@ -21,6 +21,8 @@ __all__ = [
 class BaseAmazon(arcade.Sprite):
     """Shared sprite-loading and animation logic for player & enemy."""
 
+    _texture_cache: dict[tuple[Path, str, bool], list[arcade.Texture]] = {}
+
     def __init__(
         self,
         state_info: dict[str, AnimInfo],
@@ -28,10 +30,13 @@ class BaseAmazon(arcade.Sprite):
         scale: float = 1.0,
         flip_vertical: bool = False,
     ) -> None:
-        # Load frames for each state
+        # Load frames for each state (cached at class level)
         self.state_info = state_info
         for state, info in self.state_info.items():
-            info.frames = load_animation(state, info, sprites_dir, flip_vertical)
+            cache_key = (sprites_dir, state, flip_vertical)
+            if cache_key not in self._texture_cache:
+                self._texture_cache[cache_key] = load_animation(state, info, sprites_dir, flip_vertical)
+            info.frames = self._texture_cache[cache_key]
 
         super().__init__(
             self.state_info["Idle"].frames,
